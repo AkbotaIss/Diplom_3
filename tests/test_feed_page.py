@@ -1,75 +1,60 @@
 import allure
 
 from urls import BASE_URL
-from pages.main_page import MainPage
 from pages.feed_page import FeedPage
+from pages.main_page import MainPage
 
 
-@allure.title("При создании заказа счётчик 'Выполнено за всё время' увеличивается")
-def test_orders_done_all_time_increases(driver, create_order):
-    main_page = MainPage(driver, BASE_URL)
-    main_page.open_main()
-    main_page.go_to_feed()
+@allure.suite("Лента заказов")
+class TestFeedPage:
 
-    feed_page = FeedPage(driver, BASE_URL)
+    @allure.title("При создании заказа счётчик 'Выполнено за всё время' увеличивается")
+    def test_orders_done_all_time_increases(self, driver, create_order):
+        feed_page = FeedPage(driver, BASE_URL)
+        main_page = MainPage(driver, BASE_URL)
 
-    # начальное значение
-    initial = feed_page.get_orders_done_all_time()
+        main_page.open_main()
+        feed_page.open_feed()
 
-    # создаём заказ через API
-    create_order()
+        initial = feed_page.get_orders_done_all_time()
 
-    # обновляем страницу ленты
-    driver.refresh()
+        create_order()  # создаём заказ через API
 
-    # ждём, пока счётчик станет больше
-    feed_page.wait.until(
-        lambda d: feed_page.get_orders_done_all_time() > initial
-    )
+        feed_page.refresh()
+        feed_page.wait_all_time_increases(initial)
+        updated = feed_page.get_orders_done_all_time()
 
-    updated = feed_page.get_orders_done_all_time()
-    assert updated > initial
+        assert updated > initial
 
+    @allure.title("При создании заказа счётчик 'Выполнено за сегодня' увеличивается")
+    def test_orders_done_today_increases(self, driver, create_order):
+        feed_page = FeedPage(driver, BASE_URL)
+        main_page = MainPage(driver, BASE_URL)
 
-@allure.title("При создании заказа счётчик 'Выполнено за сегодня' увеличивается")
-def test_orders_done_today_increases(driver, create_order):
-    main_page = MainPage(driver, BASE_URL)
-    main_page.open_main()
-    main_page.go_to_feed()
+        main_page.open_main()
+        feed_page.open_feed()
 
-    feed_page = FeedPage(driver, BASE_URL)
+        initial = feed_page.get_orders_done_today()
 
-    initial = feed_page.get_orders_done_today()
+        create_order()  # создаём заказ через API
 
-    create_order()
+        feed_page.refresh()
+        feed_page.wait_today_increases(initial)
+        updated = feed_page.get_orders_done_today()
 
-    driver.refresh()
+        assert updated > initial
 
-    feed_page.wait.until(
-        lambda d: feed_page.get_orders_done_today() > initial
-    )
+    @allure.title("После оформления заказа его номер появляется в разделе 'В работе'")
+    def test_new_order_appears_in_progress(self, driver, create_order):
+        feed_page = FeedPage(driver, BASE_URL)
+        main_page = MainPage(driver, BASE_URL)
 
-    updated = feed_page.get_orders_done_today()
-    assert updated > initial
+        order_number = create_order()  # номер заказа из API
 
+        main_page.open_main()
+        feed_page.open_feed()
 
-@allure.title("После оформления заказа его номер появляется в разделе 'В работе'")
-def test_new_order_appears_in_progress(driver, create_order):
-    # создаём заказ и запоминаем номер
-    order_number = create_order()
+        feed_page.wait_order_in_progress(order_number)
+        in_progress_numbers = feed_page.get_orders_in_progress()
 
-    main_page = MainPage(driver, BASE_URL)
-    main_page.open_main()
-    main_page.go_to_feed()
-
-    feed_page = FeedPage(driver, BASE_URL)
-
-    driver.refresh()
-
-    # ждём, пока номер появится в списке "В работе"
-    feed_page.wait.until(
-        lambda d: str(order_number) in feed_page.get_orders_in_progress()
-    )
-
-    in_progress_numbers = feed_page.get_orders_in_progress()
-    assert str(order_number) in in_progress_numbers
+        assert str(order_number) in in_progress_numbers

@@ -9,11 +9,7 @@ from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
-from urls import BASE_URL
-
-
-API_BASE_URL = "https://stellarburgers.education-services.ru"
-
+from urls import INGREDIENTS_API_URL, ORDERS_API_URL
 
 
 @pytest.fixture(params=["chrome", "firefox"])
@@ -37,7 +33,7 @@ def driver(request):
         driver.maximize_window()
 
     else:
-        raise ValueError("Unsupported browser")
+        raise ValueError(f"Unsupported browser: {browser}")
 
     yield driver
     driver.quit()
@@ -49,9 +45,9 @@ def create_order():
     Создаёт заказ через API и возвращает номер заказа.
     """
 
-    def _create_order():
+    def _create_order() -> int:
         # получаем ингредиенты
-        ingredients_response = requests.get(f"{API_BASE_URL}/api/ingredients")
+        ingredients_response = requests.get(INGREDIENTS_API_URL)
         ingredients_response.raise_for_status()
 
         ingredients = ingredients_response.json()["data"]
@@ -59,7 +55,7 @@ def create_order():
 
         # создаём заказ
         order_response = requests.post(
-            f"{API_BASE_URL}/api/orders",
+            ORDERS_API_URL,
             json={"ingredients": ingredient_ids},
         )
         order_response.raise_for_status()
